@@ -51,6 +51,7 @@ cd "$INSTALL_DIR"
 swiftc -parse-as-library \
     -framework SwiftUI \
     -framework AppKit \
+    -O \
     -o ClaudeBar ClaudeBarApp.swift
 
 ok "Built $INSTALL_DIR/ClaudeBar"
@@ -83,7 +84,6 @@ ok "Created $STATUSLINE_SCRIPT"
 EXPECTED_COMMAND="bash $STATUSLINE_SCRIPT"
 
 if [ ! -f "$SETTINGS_FILE" ]; then
-    # No settings file at all — create one with just the statusLine
     echo "{\"statusLine\":{\"type\":\"command\",\"command\":\"$EXPECTED_COMMAND\"}}" \
         | python3 -m json.tool > "$SETTINGS_FILE"
     ok "Created $SETTINGS_FILE with statusLine"
@@ -98,7 +98,6 @@ sys.exit(1)
 " 2>/dev/null; then
     skip "statusLine already configured in settings.json"
 else
-    # Add or replace statusLine key
     python3 -c "
 import json
 with open('$SETTINGS_FILE') as f:
@@ -123,6 +122,9 @@ step 4 "Ready"
 
 echo -e "\n  Run the app:"
 echo -e "    ${BOLD}$INSTALL_DIR/ClaudeBar${RESET}"
+echo ""
+echo -e "  Or build a distributable .app bundle:"
+echo -e "    ${DIM}./build-app.sh${RESET}"
 echo ""
 echo -e "  ${DIM}The sparkle icon will appear in your menu bar."
 echo -e "  Usage data populates when you use Claude Code in a terminal.${RESET}"

@@ -31,26 +31,32 @@ The statusline hook is the key to live usage data. When Claude Code runs, it per
 
 ## Setup
 
+### Option A: Download the DMG (easiest)
+
+1. Download `ClaudeBar.dmg` from [Releases](https://github.com/shakirulhkhan/claudebar/releases)
+2. Open the DMG and drag **ClaudeBar** to Applications
+3. Launch ClaudeBar (right-click > Open on first launch since the app is unsigned)
+
+The app auto-configures the Claude Code statusline hook on first launch -- no manual setup needed.
+
+### Option B: Build and install from source
+
 ```bash
 git clone https://github.com/shakirulhkhan/claudebar.git
 cd claudebar
 ./install.sh
-```
-
-The installer:
-
-1. Checks prerequisites (`swiftc`, `~/.claude/`, `claude` CLI)
-2. Compiles `ClaudeBarApp.swift` into a native binary
-3. Creates the statusline hook script at `~/.claude/claudebar-statusline.sh`
-4. Adds the `statusLine` config to `~/.claude/settings.json` (preserves existing settings)
-
-Then run:
-
-```bash
 ./ClaudeBar
 ```
 
-The sparkle icon appears in your menu bar. Click it to see your dashboard.
+The installer compiles the binary, sets up the statusline hook, and configures `settings.json`. Run `./ClaudeBar` from the terminal to launch.
+
+### Option C: Build a .app bundle
+
+```bash
+./build-app.sh
+```
+
+Produces `ClaudeBar.app` (double-click, no terminal needed) and `ClaudeBar.dmg` (share with others). The app auto-configures the statusline hook on first launch.
 
 ### Manual setup
 

@@ -130,9 +130,23 @@ func loadUsageData() -> UsageData {
 }
 
 func getClaudeVersion() -> String {
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    let searchPaths = [
+        "\(home)/.local/bin/claude",
+        "\(home)/.claude/local/bin/claude",
+        "/usr/local/bin/claude",
+        "/opt/homebrew/bin/claude"
+    ]
+    let claudePath = searchPaths.first { FileManager.default.isExecutableFile(atPath: $0) }
+
     let pipe = Pipe(); let proc = Process()
-    proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    proc.arguments = ["claude", "--version"]
+    if let path = claudePath {
+        proc.executableURL = URL(fileURLWithPath: path)
+        proc.arguments = ["--version"]
+    } else {
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        proc.arguments = ["claude", "--version"]
+    }
     proc.standardOutput = pipe; proc.standardError = FileHandle.nullDevice
     do { try proc.run() } catch { return "Unknown" }
     let d = pipe.fileHandleForReading.readDataToEndOfFile(); proc.waitUntilExit()
@@ -276,6 +290,13 @@ func shortDate(_ s: String) -> String {
 func formatDuration(_ ms: Int) -> String {
     let s = ms / 1000; let d = s / 86400; let h = (s % 86400) / 3600; let m = (s % 3600) / 60
     if d > 0 { return "\(d)d \(h)h \(m)m" }; if h > 0 { return "\(h)h \(m)m" }; return "\(m)m"
+}
+
+func isStale(_ dateStr: String) -> Bool {
+    let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
+    guard df.date(from: dateStr) != nil else { return true }
+    let today = df.string(from: Date())
+    return dateStr != today
 }
 
 func resetTimeLocal(_ iso: String) -> String {
@@ -706,6 +727,24 @@ struct ContentView: View {
     var statsTab: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 12) {
+                // Stale data hint
+                if let lcd = monitor.stats?.lastComputedDate, isStale(lcd) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 9))
+                            .foregroundColor(.yellow)
+                        Text("Data through \(shortDate(lcd))")
+                            .font(.system(size: 10))
+                        Spacer()
+                        Text("Run /stats in Claude Code to refresh")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Color.yellow.opacity(0.06))
+                    .cornerRadius(6)
+                }
+
                 HeatmapView(data: monitor.heatmapData, maxCount: monitor.heatmapData.values.max() ?? 1)
 
                 Card {
@@ -844,6 +883,60 @@ struct TabPill: View {
     }
 }
 
+// MARK: - Auto Setup
+
+func ensureStatuslineConfigured() {
+    let home = FileManager.default.homeDirectoryForCurrentUser
+    let claudeDir = home.appendingPathComponent(".claude")
+    let scriptPath = claudeDir.appendingPathComponent("claudebar-statusline.sh")
+    let settingsPath = claudeDir.appendingPathComponent("settings.json")
+
+    guard FileManager.default.fileExists(atPath: claudeDir.path) else { return }
+
+    // 1. Create statusline script if missing
+    if !FileManager.default.fileExists(atPath: scriptPath.path) {
+        let script = """
+        #!/bin/bash
+        INPUT=$(cat)
+        echo "$INPUT" > "$HOME/.claude/claudebar-usage.json"
+        echo "$INPUT" | python3 -c "
+        import sys, json
+        try:
+            d = json.load(sys.stdin)
+            r = d.get('rate_limits', {})
+            h = r.get('five_hour', {})
+            w = r.get('seven_day', {})
+            print(f'Session: {h.get(\\\"used_percentage\\\", \\\"?\\\"):}% | Week: {w.get(\\\"used_percentage\\\", \\\"?\\\"):}%')
+        except: pass
+        " 2>/dev/null
+        """
+        try? script.write(to: scriptPath, atomically: true, encoding: .utf8)
+        // chmod +x
+        var attrs = (try? FileManager.default.attributesOfItem(atPath: scriptPath.path)) ?? [:]
+        attrs[.posixPermissions] = 0o755
+        try? FileManager.default.setAttributes(attrs, ofItemAtPath: scriptPath.path)
+    }
+
+    // 2. Add statusLine to settings.json if not already present
+    if FileManager.default.fileExists(atPath: settingsPath.path) {
+        guard let data = try? Data(contentsOf: settingsPath),
+              var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        // Check if statusLine already references claudebar
+        if let sl = json["statusLine"] as? [String: Any],
+           let cmd = sl["command"] as? String, cmd.contains("claudebar") { return }
+        json["statusLine"] = ["type": "command", "command": "bash \(scriptPath.path)"] as [String: Any]
+        if let out = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]) {
+            try? out.write(to: settingsPath)
+        }
+    } else {
+        // Create minimal settings.json
+        let settings: [String: Any] = ["statusLine": ["type": "command", "command": "bash \(scriptPath.path)"]]
+        if let out = try? JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted]) {
+            try? out.write(to: settingsPath)
+        }
+    }
+}
+
 // MARK: - App Delegate
 
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -851,6 +944,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var popover: NSPopover!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Auto-configure statusline on first launch
+        ensureStatuslineConfigured()
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "sparkle", accessibilityDescription: "ClaudeBar")

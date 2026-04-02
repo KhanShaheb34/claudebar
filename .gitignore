@@ -1,5 +1,8 @@
 # Build output
 ClaudeBar
+ClaudeBar.app/
+ClaudeBar.dmg
+dmg-staging/
 *.o
 *.d
 
