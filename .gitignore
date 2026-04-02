@@ -1,0 +1,15 @@
+# Build output
+ClaudeBar
+*.o
+*.d
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode (if ever used)
+*.xcodeproj/
+*.xcworkspace/
+build/
+DerivedData/
