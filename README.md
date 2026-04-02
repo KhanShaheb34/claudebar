@@ -33,7 +33,7 @@ The statusline hook is the key to live usage data. When Claude Code runs, it per
 
 ### Option A: Download the DMG (easiest)
 
-1. Download `ClaudeBar.dmg` from [Releases](https://github.com/shakirulhkhan/claudebar/releases)
+1. Download `ClaudeBar.dmg` from [Releases](https://github.com/KhanShaheb34/claudebar/releases)
 2. Open the DMG and drag **ClaudeBar** to Applications
 3. Launch ClaudeBar (right-click > Open on first launch since the app is unsigned)
 
@@ -42,7 +42,7 @@ The app auto-configures the Claude Code statusline hook on first launch -- no ma
 ### Option B: Build and install from source
 
 ```bash
-git clone https://github.com/shakirulhkhan/claudebar.git
+git clone https://github.com/KhanShaheb34/claudebar.git
 cd claudebar
 ./install.sh
 ./ClaudeBar
