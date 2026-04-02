@@ -2,6 +2,8 @@
 
 A macOS menubar app that shows your Claude Code usage, stats, and model breakdown at a glance.
 
+Built entirely by Claude Code using the [menubar](https://github.com/KhanShaheb34/menubar) skill -- a single prompt to compiled native app, no Xcode required.
+
 ![macOS](https://img.shields.io/badge/macOS-14%2B-blue) ![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange) ![No Xcode Required](https://img.shields.io/badge/Xcode-not%20required-green)
 
 ## Features
